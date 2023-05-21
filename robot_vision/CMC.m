@@ -24,7 +24,8 @@ end
 
 % Aµ = u
 %mu = A \ u.' ; % 矩陣左除（\）運算符 ， 转置矩陣(.') 把1*8的u轉成8*1
-mu = lsqr(A,X'); %least square (結果和上面的一樣) ，修正不是用u'而是X' (因為要用image座標，而非裁切座標)
+%mu = lsqr(A,X'); %least square (結果和上面的一樣) ，修正不是用u'而是X' (因為要用image座標，而非裁切座標)
+mu = pinv(A)*X';
 
 %U = sum(mu.^2); % mu所有元素平方和
 U = mu(1)^2 + mu(2)^2 + mu(3)^2 + mu(4)^2; %應該是mu 1~4的平方和
@@ -35,7 +36,7 @@ threshold = mu(1)*mu(4)- mu(2)*mu(3) ; % 決定Ty的條件，暫定叫threshold
 if threshold == 0
     Ty = sqrt(1/U) ;
 else 
-    numerator = sqrt( U - sqrt( U^2 - 4*(threshold)^2  ) );
+    numerator = U - sqrt( U^2 - 4*(threshold)^2  ) ; %修正，外圍不用sqrt()
     denominator = 2*(threshold)^2;
     Ty = sqrt( numerator/denominator );
 end
@@ -66,20 +67,23 @@ R(3,1) = R(1,2)*R(2,3) - R(1,3)*R(2,2);
 R(3,2) = R(1,3)*R(2,1) - R(1,1)*R(2,3);
 R(3,3) = R(1,1)*R(2,2) - R(1,2)*R(2,1);
 
-% 求f，Tz
-B = zeros(8, 2); % 初始化 8x2 的矩陣 B
+% 求f，Tz %修正
+B = zeros(8, 3); % 初始化 8x3 的矩陣 B
 C = zeros(8,1); 
+Tx = mu(5)*Ty;
 for i = 1:8
-    B(i,:) = [Xw(i), u(i)];
+    x_wave = R(1,1)*Xw(i)+R(1,2)*Yw(i)+Tx;
+    B(i,:) = [x_wave  (u(i)^2+v(i)^2)*x_wave  -u(i)];
     C(i,:) =  ( R(3,1)*Xw(i) + R(3,2)*Yw(i) ) * u(i) ;
 end
 %param = B \ C; %結果和下面的least square相同
-param = lsqr(B,C);
+%param = lsqr(B,C);
+param = pinv(B)*C;
 
 f = param(1);
-Tz = param(2);
+Tz = param(3);
 
 T = zeros(3,1);
-T(1) = mu(5)*Ty;
+T(1) = Tx;
 T(2) = Ty;
 T(3) = Tz;
